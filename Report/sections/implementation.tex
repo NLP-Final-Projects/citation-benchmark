@@ -1,1 +1,174 @@
-The implementation section.
+\subsection{Base Code}
+Our implementation is structured into four primary components: \textbf{Utils}, \textbf{Searcher}, \textbf{Run}, and \textbf{Eval}. Each of these components plays a crucial role in the workflow, from data preprocessing to evaluation of the final output. Below is a detailed explanation of each part.
+
+\textbf{Utils:} The $Utils$ section contains essential utilities that streamline the overall process. These utilities include functions like normalizer, which standardizes input data by removing noise and ensuring consistency, and $load\_model$, which facilitates the loading of pre-trained models. These tools are fundamental for setting up the environment and preparing data before it's passed through the main stages of the pipeline.
+
+\begin{itemize}
+    \item \textbf{Normalizer:} This function standardizes the input string by performing several text preprocessing steps. It involves:
+
+    \begin{itemize}
+        \item \textbf{Lowercasing:} Converts all characters in the string to lowercase.
+        \item \textbf{Punctuation Removal:} Removes all punctuation marks from the string.
+        \item \textbf{Article Removal:} Removes common English articles like "a," "an," and "the."
+        \item \textbf{Whitespace Fix:} Collapses multiple spaces into a single space and trims leading/trailing spaces.
+    \end{itemize}
+
+    This method is typically used to normalize text before further processing, ensuring consistency and reducing variability caused by differences in case, punctuation, or articles.
+
+    \item \textbf{Removing citations:} This function removes citation markers from a given sentence, which are typically denoted by numbers in square brackets (e.g., "[1]"). It does this by using regular expressions to find and replace these patterns. The cleaned sentence is then returned without citation markers, making it easier to read and process.
+
+    \item \textbf{Getting maximum memory:} This method calculates the maximum memory available for the current GPU(s) to load models. It:
+
+    \begin{itemize}
+        \item Retrieves the free memory in GB using PyTorch’s CUDA utilities.
+        \item Subtracts a buffer (6 GB) from the available memory to avoid over-allocation.
+        \item Creates a dictionary that maps each GPU to the computed maximum memory.
+    \end{itemize}
+
+    This function is useful for ensuring that the model loading process stays within the available memory limits, preventing out-of-memory errors.
+
+    \item \textbf{Creating formatted document prompt:} This function generates a formatted document prompt by filling in placeholders within a template string. It involves:
+
+    \begin{itemize}
+        \item Replacing $ID$ with the document ID (incremented by 1).
+        \item Replacing $T$ with the document title.
+        \item Replacing $P$ with the document text or a shortened version, if specified by $use\_shorter$ attribute.
+    \end{itemize}
+
+    This is typically used to prepare documents for input into a model, allowing the use of either full text or more concise representations like summaries or extractions.
+
+    \item \textbf{Getting summary of a document:} This method attempts to retrieve a shorter version of the document text based on a specified key (e.g., "summary"). It iterates through the documents, and if a shorter version isn't found for any document, it logs a warning and defaults to using the full text. The function ensures that at least one document is always provided, even if the shortened version is unavailable.
+
+    \item \textbf{Creating a prompt:} The $make\_demo$ function is designed to generate a formatted prompt that can be used to demonstrate or test the model’s capabilities. It prepares the input text by filling in placeholders within a template based on provided data.
+
+    \item \textbf{Loading the model:} This function loads a Hugging Face model and tokenizer, preparing them for inference or training. This function provides flexibility in terms of model precision and memory management.
+\end{itemize}
+
+These methods collectively provide essential utilities for text processing, memory management, and prompt preparation. They are modular, allowing them to be easily reused across different parts of the project.
+
+\textbf{Searcher:} This module is designed to search for relevant documents within a given set of documents using either the TF-IDF (Term Frequency-Inverse Document Frequency) method or a dense retrieval model (like GTR). The module provides a class $SearcherWithinDocs$ that can be initialized with a set of documents and a chosen retrieval method ($tfidf$ or $gtr$). It then allows you to search for the most relevant document based on a given query. The key functions and classes are:
+
+\begin{itemize}
+    \item $doc\_to\_text\_tfidf:$ This function takes a document in the form of a dictionary and concatenates its title and text fields into a single string. This string serves as the input text for TF-IDF vectorization.
+
+    \item $doc\_to\_text\_dense:$ Similar to $doc\_to\_text\_tfidf$, this function concatenates the title and text of a document but separates them with a period (.) and space. This format is used for dense retrieval models.
+
+    \item $SearcherWithinDocs class:$ This class is the core of the module and provides methods for initializing a document retriever and performing searches within the documents. Its functionality is specified by $retriever$ attribute.
+
+    \begin{itemize}
+        \item If $tfidf$ is chosen, it initializes a $TfidfVectorizer$ and fits it on the concatenated text of the documents using $doc\_to\_text\_tfidf$. Then cosine similarity between the query vector and each document's vector is calculated.
+
+        \item If $gtr$ (or a similar dense retrieval method) is chosen, it encodes the documents into embeddings using the provided model and stores these embeddings. Then cosine similarity (or dot product) between the query embedding and the document embeddings is calculated
+
+        \item If an unsupported method is passed to retriever, the method raises a $NotImplementedError$.
+    \end{itemize}
+\end{itemize}
+
+\textbf{Run:} This module orchestrates the overall process of generating language model outputs for evaluation or interaction, utilizing a variety of models and APIs (such as OpenAI's API). It includes configurations, data loading, prompt generation, model invocation, and result handling. The key components are:
+
+\begin{itemize}
+    \item $remove\_citations:$ Removes citation-like patterns from text using regular expressions.
+
+    \item $LLM$ \textbf{class:} First it sets up the model based on the provided arguments, either by using the OpenAI API or by loading a local/Hugging Face's model. Then it generates text using $generate$ function.
+
+    \item \textbf{Main execution:}
+    \begin{itemize}
+        \item \textbf{Argument parsing:} Uses $argparse$ to manage various configurations like model selection, evaluation files, prompt files, and decoding strategies.
+
+        \item \textbf{Configuration Loading:} Loads configuration from a YAML file if specified, otherwise defaults to the command-line arguments.
+
+        \item \textbf{Prompt and Evaluation Data Loading:} Loads prompt and evaluation data from JSON files then it generates in-context learning (ICL) demonstrations based on the configuration.
+
+        \item \textbf{Interactive Mode:} Implements an interactive querying process where the model can search within documents or check documents before producing a final output.
+
+        \item \textbf{Result Saving:} Handles saving of the generated outputs and associated data to disk. It includes logic for naming the output files based on the various configurations used during execution.
+
+        \item \textbf{Token Usage Calculation:} If the OpenAI API is used, it calculates the total token usage and estimates costs based on the model selected.
+    \end{itemize}
+\end{itemize}
+
+A more detailed workflow:
+
+\begin{itemize}
+    \item \textbf{Initialization and Setup:} The script starts by configuring logging, parsing arguments, and loading configurations.
+
+    \item \textbf{Model Loading:} Depending on the $openai\_api$ flag, either a local/Hugging Face's model or the OpenAI API is used for text generation. The script is capable of handling different models, including those accessed via Azure.
+
+    \item \textbf{Prompt Generation:} Based on the prompts and evaluation data, it constructs input prompts with ICL demonstrations. This is crucial for tasks requiring context-sensitive completions.
+
+    \item \textbf{Text Generation:} Text is generated using the model. The script supports both batch processing and an interactive mode where the model can refine its answers based on user feedback or additional document checks.
+
+    \item \textbf{Final Output Handling:} Results are compiled and saved, including model outputs, prompts, and any relevant metadata like token usage. This ensures that the output can be analyzed and reproduced if needed.
+\end{itemize}
+
+\textbf{Eval:} This module is a comprehensive evaluation script for assessing various metrics related to natural language processing tasks, particularly those involving QA systems, ROUGE scoring, and other metrics for language generation models. Here's a breakdown of the key components and functionality:
+
+\begin{itemize}
+    \item $compute\_f1:$ Computes the F1 score between two strings, $a\_gold$ (reference answer) and $a\_pred$ (predicted answer). It tokenizes both strings and calculates the precision, recall, and F1 score based on overlapping tokens.
+
+    \item $compute\_exact:$ Checks if the two strings are exactly equal after normalization.
+
+    \item $exact\_presence:$ Checks if any of the short answers are present in the given context.
+
+    \item $compute\_rouge:$ Calculates the ROUGE-L score \cite{ROUGE2.0} between generated text and reference texts. If two reference texts are provided, it picks the best score.
+
+    \item $compute\_str\_em:$ Calculates the STR-EM (Exact Match) metric for short answer questions.
+
+    \item $compute\_len:$ Computes the average length of predictions in terms of word count.
+
+    \item $compute\_qa:$ Uses a pre-trained RoBERTa \cite{RoBERTa} model fine-tuned on SQuAD \cite{SQuAD} to calculate QA-based metrics such as QA-EM (Exact Match), QA-F1, and QA-Hit. This involves using a QA pipeline to assess the quality of the generated answers.
+
+    \item $compute\_mauve:$ Calculates the MAUVE score \cite{MAUVE}, which is a metric for comparing the distribution of generated text with human text.
+
+    \item $\_run\_nli\_autoais:$ Runs an NLI (Natural Language Inference) model to assess the alignment between a passage and a claim, used for evaluating attribution in generated text. The NLI model used in the function is $google/t5\_xxl\_true\_nli\_mixture$ \cite{honovich-etal-2022-true-evaluating}. This is a variant of the T5 model that has been fine-tuned specifically for Natural Language Inference (NLI) tasks.
+
+    \item $compute\_claims:$ Computes the entailment between claims and model-generated outputs using the AutoAIS model.
+
+    \item $compute\_autoais:$ Evaluates generated outputs using the AutoAIS model, considering citations, decontextualization, and QA-extracted documents. This function is complex and includes handling multiple citations and checking precision and recall of references.
+
+    \item $compute\_qampari\_f1:$ Computes the QAMPARI F1 metric \cite{QAMPARI}, which evaluates answer predictions against a list of possible answers, considering both precision and recall.
+\end{itemize}
+
+Totally this module is a powerful tool for evaluating NLP models, particularly for tasks involving text generation, QA systems, and attribution. It integrates various evaluation metrics and models to provide a comprehensive assessment of the model's performance.
+
+
+\subsection{Suggested Metric}
+The evaluation of citation quality has traditionally relied on basic metrics like precision, recall, or manual assessment, which often fail to capture the nuanced requirements of citation tasks. We've countered this issue by using some methods combined together. Copilot and Perplexity.AI were used as the models that cite their text while responding to a query. We aim to check the correctness of each cited part of the response, using atomic facts of that part and comparing them with the source that's provided for the part. Here's how it is approached; a query is given to a model (Either Copilot or Perplexity.AI), then the response is divided into different cited parts. For each cited part, atomic facts of the text are first extracted using GPT-4o-mini by specific prompting, then we collect the webpage's content by a web scraper, then we ask GPT-4o-mini to validate each atomic fact, regarding the webpage content provided. Then we'll have a vector for each cited part, that consists of validity of each atomic fact checked and saved by either 0s(as invalid) and 1s(as valid) in each element of the vector. The quality of citation in a particular cited part is evaluated by this:
+Consider we have a validation vector, named V:
+$$
+score=\frac{\text{number of 1's in V}}{\text{number of V's elements}}
+$$
+The final task of this part is to determine the citation quality of the whole text generated by the model. So we need to aggregate the scores of each cited part of the model's response. In order to do that, we choose to aggregate the scores using weighted average, by dedicating a decaying weight to scores of cited parts. In this way, the first parts of the response matters the most for us and as we approach the end of the text, the weight and the importance decreases in the final score.\\
+Assuming we have $score_1$, $score_2$,..., $score_n$ for n cited parts, we aggregate them in the following method outlined below.
+Here's the response validation score.
+$$
+\\ \frac{n \times score_1 + (n-1) \times score_2 + ... + 1 \times score_n}{\text{Sum} \[ \sum_{1}^{n}\]}
+$$
+
+\subsection{Reconstruct Summary}
+One known limitation of current models is their token length, which typically ranges from 2,000 to 8,000 tokens depending on the model. This constraint can impact the number of documents that can be processed by the model during inference. To address this, one approach is to use summarization techniques to condense each document, allowing more documents to be passed to the model. We extended this idea by reconstructing sentences with their named entities.
+
+In the first step, we aimed to extract named entities from the sentences. We tested various approaches, including classic methods like spaCy and deep learning models such as fine-tuned BERT, RoBERTa Large NER, and Microsoft's DeBERTa. However, we found that the classic spaCy model performed best in terms of accuracy. Additionally, we recognized that other parts of the text, such as positive or negative verbs, are also important in some documents. To account for this, we introduced a hyperparameter that allows for the inclusion of other sentence components alongside the named entity tokens. The default value for this hyperparameter is set to 0.25, meaning that one-fourth of the non-NE parts are added to the NE tokens.
+
+In the second step, we needed to reconstruct the sentence using the extracted tokens in their original order. We employed the Llama3 model and utilized a prompt similar to this one to generate the reconstructed sentence:
+
+\begin{center}
+\textbf{\textit{Generate a sentence using the following entities:}}
+\end{center}
+
+As a result, the quality of the documents improved, leading to better metrics, which are presented in the Table 1.
+
+\begin{table}[]
+  \centering
+  \begin{tabular}{@{}cccc@{}}
+    \toprule
+    Mode  & rougeLsum    & citation rec & citation prec \\
+    \midrule
+    Base & 25.82 & 2.76 & 5.8 \\
+    Our & 29.92 & 4.2 & 5.67 \\
+    \bottomrule
+  \end{tabular}
+  \caption{Reconstruction Results}
+\end{table}
+
+We evaluated other models, such as GPT-2 and PaLM, but found that Llama3 produced the best-generated sentences, so we chose it for our approach.

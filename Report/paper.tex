@@ -28,6 +28,8 @@
             tracking=true, kerning=true, spacing=true,
             factor=1100, stretch=10, shrink=10]{microtype}
 
+\usepackage{booktabs,chemformula}
+
 \DeclareCaptionFormat{modifiedlst}{\rule{\linewidth}{0.85pt}\\[-2.9pt]#1#2#3}
 \captionsetup[lstlisting]{format =  modifiedlst,
 labelfont=bf,singlelinecheck=off,labelsep=space}
@@ -48,12 +50,12 @@ labelfont=bf,singlelinecheck=off,labelsep=space}
         escapeinside={<@}{@>}}
 
 \title{\vspace{-1.5em}\textbf{Citation Benchmark}}
-\author{{\textbf{Ali Nazari, Illia Hashemirad, Shayan Salehi, }} \\
-        {\textbf{Mehdi Lotfian, Masih Najai, Amir Mohammad Fakhimi}} \\
-        {\href{ali.nazari.8102@gmail.com}{\texttt{<ali.nazari.8102@gmail.com>}}\href{s.salehi1381@gmail.com}{\texttt{<s.salehi1381@gmail.com>}}} \\
-        {\href{mehdilotfian.meloent@gmail.com}{\texttt{<mehdilotfian.meloent@gmail.com>}}\href{najafim2002@gmail.com}{\texttt{<najafim2002@gmail.com>}}} \\
-        {\href{fakhimi.amirmohamad@gmail.com}{\texttt{<fakhimi.amirmohamad@gmail.com>}}} \\
-        {Sharif University of Technology, Tehran}}
+\author{{\textbf{Ali Nazari,  Ilia Hashemi Rad, Shayan Salehi, }} \\
+        {\textbf{Mehdi Lotfian, Seyed Mohammad Yousef Najafi, Amir Mohammad Fakhimi}} \\
+        {\href{ali.nazari.8102@gmail.com}{\texttt{<ali.nazari.8102@gmail.com>}}\href{iliahashemirad@gmail.com}{\texttt{<iliahashemirad@gmail.com>}}} \\ 
+        {\href{s.salehi1381@gmail.com}{\texttt{<s.salehi1381@gmail.com>}}\href{mehdilotfian.meloent@gmail.com}{\texttt{<mehdilotfian.meloent@gmail.com>}}} \\   
+        {\href{najafim2002@gmail.com}{\texttt{<najafim2002@gmail.com>}}\href{fakhimi.amirmohamad@gmail.com}{\texttt{<fakhimi.amirmohamad@gmail.com>}}} \\
+        {Computer Engineering Department, Sharif University of Technology, Tehran}}
 
 \begin{document}
 
@@ -63,7 +65,7 @@ labelfont=bf,singlelinecheck=off,labelsep=space}
     \section{Introduction} \label{sec:introduction} \input{sections/introduction.tex}
     \section{Related Work} \label{sec:related_work} \input{sections/related_work.tex}
     \section{Implementation} \label{sec:implementation} \input{sections/implementation.tex}
-    \section{Results} \label{sec:results} \input{sections/results.tex}
+    % \section{Results} \label{sec:results} \input{sections/results.tex}
     \section{Conclusions} \label{sec:conclusions} \input{sections/conclusions.tex}
 
     \nocite{*} % TODO: remove
